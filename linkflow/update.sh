@@ -100,7 +100,7 @@ main() {
   info "备份当前版本 → ${backup_dir}"
   mkdir -p "$backup_dir"
   [ -f "${INSTALL_DIR}/${BINARY_NAME}" ] && cp "${INSTALL_DIR}/${BINARY_NAME}" "$backup_dir/"
-  [ -d "${INSTALL_DIR}/web/dist" ] && cp -r "${INSTALL_DIR}/web/dist" "$backup_dir/"
+  [ -d "${INSTALL_DIR}/dist" ] && cp -r "${INSTALL_DIR}/dist" "$backup_dir/"
 
   # 下载后端
   local backend_file="${PROJECT}-backend-linux-${arch}.tar.gz"
@@ -130,16 +130,17 @@ main() {
   fi
 
   # 替换后端
-  tar -xzf "/tmp/${backend_file}" -C "${INSTALL_DIR}/"
+  tar --no-xattrs -xzf "/tmp/${backend_file}" -C "${INSTALL_DIR}/" 2>/dev/null \
+    || tar -xzf "/tmp/${backend_file}" -C "${INSTALL_DIR}/"
   chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
   rm -f "/tmp/${backend_file}"
   ok "后端已更新"
 
-  # 替换前端
+  # 替换前端 → 安装目录根(创建 dist/)
   if [ -f "/tmp/${frontend_file}" ]; then
-    rm -rf "${INSTALL_DIR}/web/dist"
-    mkdir -p "${INSTALL_DIR}/web"
-    tar -xzf "/tmp/${frontend_file}" -C "${INSTALL_DIR}/web/"
+    rm -rf "${INSTALL_DIR}/dist"
+    tar --no-xattrs -xzf "/tmp/${frontend_file}" -C "${INSTALL_DIR}/" 2>/dev/null \
+      || tar -xzf "/tmp/${frontend_file}" -C "${INSTALL_DIR}/"
     rm -f "/tmp/${frontend_file}"
     ok "前端已更新"
   fi

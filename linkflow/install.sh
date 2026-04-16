@@ -8,7 +8,7 @@
 #  安装后目录结构:
 #    /opt/linkflow/
 #    ├── linkflow-api        # 后端二进制
-#    ├── web/dist/           # 前端静态产物(index.html + assets/)
+#    ├── dist/               # 前端静态产物(index.html + assets/)
 #    ├── .env                # 配置文件(含密码/JWT/CORS)
 #    ├── .domains            # 已绑定域名列表
 #    ├── start.sh            # 启动脚本
@@ -357,20 +357,21 @@ download_release() {
     || err "后端下载失败 (${backend_file})"
   tar -tzf "/tmp/${backend_file}" >/dev/null 2>&1 || err "后端包损坏"
   _stop_service_if_running
-  sudo tar -xzf "/tmp/${backend_file}" -C "${INSTALL_DIR}/"
+  sudo tar --no-xattrs -xzf "/tmp/${backend_file}" -C "${INSTALL_DIR}/" 2>/dev/null \
+    || sudo tar -xzf "/tmp/${backend_file}" -C "${INSTALL_DIR}/"
   sudo chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
   rm -f "/tmp/${backend_file}"
   ok "后端 → ${INSTALL_DIR}/${BINARY_NAME}"
 
-  # 前端 tar.gz
+  # 前端 tar.gz → 解压到安装目录根(创建 dist/)
   local frontend_file="${PROJECT}-frontend.tar.gz"
   info "下载前端: ${frontend_file}"
   if curl -fSL --progress-bar "${base_url}/${frontend_file}" -o "/tmp/${frontend_file}" 2>/dev/null; then
-    sudo rm -rf "${INSTALL_DIR}/web/dist"
-    sudo mkdir -p "${INSTALL_DIR}/web"
-    sudo tar -xzf "/tmp/${frontend_file}" -C "${INSTALL_DIR}/web/"
+    sudo rm -rf "${INSTALL_DIR}/dist"
+    sudo tar --no-xattrs -xzf "/tmp/${frontend_file}" -C "${INSTALL_DIR}/" 2>/dev/null \
+      || sudo tar -xzf "/tmp/${frontend_file}" -C "${INSTALL_DIR}/"
     rm -f "/tmp/${frontend_file}"
-    ok "前端 → ${INSTALL_DIR}/web/dist"
+    ok "前端 → ${INSTALL_DIR}/dist"
   else
     warn "前端包未找到(管理界面将不可访问)"
   fi
@@ -585,7 +586,7 @@ _nginx_location_block() {
 
     # 前端静态资源
     location /assets/ {
-        root ${INSTALL_DIR}/web/dist;
+        root ${INSTALL_DIR}/dist;
         expires 7d;
         add_header Cache-Control "public, immutable";
         try_files \$uri =404;
@@ -593,14 +594,14 @@ _nginx_location_block() {
 
     # 根路径精确匹配 → 管理后台 index.html
     location = / {
-        root ${INSTALL_DIR}/web/dist;
+        root ${INSTALL_DIR}/dist;
         try_files /index.html =404;
     }
 
     # 根路径其他请求 → 先尝试静态文件(favicon.ico / vite.svg 等),
     # 找不到再交给后端处理(短链跳转 /:code 在这里命中)
     location / {
-        root ${INSTALL_DIR}/web/dist;
+        root ${INSTALL_DIR}/dist;
         try_files \$uri @backend;
     }
 
@@ -658,7 +659,7 @@ server {
 
 ${cf_include}
 
-    root ${INSTALL_DIR}/web/dist;
+    root ${INSTALL_DIR}/dist;
     index index.html;
 
     client_max_body_size 20M;
@@ -759,7 +760,7 @@ server {
 
 ${cf_include}
 
-    root ${INSTALL_DIR}/web/dist;
+    root ${INSTALL_DIR}/dist;
     index index.html;
 
     client_max_body_size 20M;
