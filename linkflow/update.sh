@@ -13,10 +13,14 @@ REPO="DoBestone/version-controller"
 BINARY_NAME="linkflow-api"
 SERVICE_NAME="linkflow"
 
-# 自动检测安装目录
+# 自动检测安装目录: 优先当前目录(有 .env 或 linkflow-api)，否则 /opt/linkflow
 _src="${BASH_SOURCE[0]:-}"
 if [[ "$_src" == /dev/fd/* ]] || [[ -z "$_src" ]]; then
-  INSTALL_DIR="/opt/linkflow"
+  if [ -f "$(pwd)/.env" ] || [ -f "$(pwd)/linkflow-api" ]; then
+    INSTALL_DIR="$(pwd)"
+  else
+    INSTALL_DIR="/opt/linkflow"
+  fi
 else
   INSTALL_DIR="$(cd "$(dirname "$_src")" && pwd)"
 fi
