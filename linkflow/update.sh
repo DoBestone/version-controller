@@ -42,11 +42,11 @@ detect_arch() {
 
 # ── 获取最新版本号 ───────────────────────────────────────────
 get_latest_version() {
-  curl -sL "https://api.github.com/repos/${REPO}/releases" \
-    | grep -o "\"tag_name\":\"${PROJECT}-v[^\"]*\"" \
-    | head -1 \
-    | sed "s/\"tag_name\":\"${PROJECT}-v//;s/\"//" \
-    || true
+  local json=""
+  json=$(curl -sL "https://api.github.com/repos/${REPO}/releases" 2>/dev/null || true)
+  [ -z "$json" ] && return
+  echo "$json" | grep -oE "\"tag_name\"[[:space:]]*:[[:space:]]*\"${PROJECT}-v[0-9][^\"]*\"" \
+    | head -1 | grep -oE "${PROJECT}-v[0-9][^\"]*" | sed "s/${PROJECT}-v//" || true
 }
 
 # ── 主流程 ───────────────────────────────────────────────────

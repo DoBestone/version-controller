@@ -337,12 +337,14 @@ download_release() {
   sudo mkdir -p "$INSTALL_DIR" "${INSTALL_DIR}/web"
 
   # 获取该项目最新版本(tag 格式: linkflow-v1.2.3)
-  local releases_json
-  releases_json=$(curl -fsSL "https://api.github.com/repos/${GITHUB_REPO}/releases" 2>/dev/null) \
-    || err "无法访问 GitHub Releases"
-  local tag_name
-  tag_name=$(echo "$releases_json" | grep -o "\"tag_name\":\"${PROJECT}-v[^\"]*\"" | head -1 | sed "s/\"tag_name\":\"//;s/\"//")
-  [ -z "$tag_name" ] && err "未找到 ${PROJECT} 的任何版本"
+  local releases_json=""
+  releases_json=$(curl -fsSL "https://api.github.com/repos/${GITHUB_REPO}/releases" 2>&1) || true
+  if [ -z "$releases_json" ] || echo "$releases_json" | grep -q '"message"'; then
+    err "无法访问 GitHub Releases API (网络问题或仓库不存在)\n  提示: 国内服务器可能需要代理访问 GitHub"
+  fi
+  local tag_name=""
+  tag_name=$(echo "$releases_json" | grep -oE "\"tag_name\"[[:space:]]*:[[:space:]]*\"${PROJECT}-v[^\"]*\"" | head -1 | grep -oE "${PROJECT}-v[0-9][^\"]*" || true)
+  [ -z "$tag_name" ] && err "未找到 ${PROJECT} 的任何 Release\n  请确认 https://github.com/${GITHUB_REPO}/releases 有 ${PROJECT}-v* 的 tag"
   local version="${tag_name#${PROJECT}-v}"
   info "最新版本: v${version}"
 
