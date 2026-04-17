@@ -781,14 +781,15 @@ setup_service() {
 [Unit]
 Description=LinkFlow 智能链接管理平台
 After=network.target mysql.service
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
 User=${USER}
 WorkingDirectory=${INSTALL_DIR}
 ExecStart=${INSTALL_DIR}/start.sh
-Restart=on-failure
-RestartSec=5
+Restart=always
+RestartSec=3
 StandardOutput=journal
 StandardError=journal
 LimitNOFILE=65536

@@ -44,6 +44,29 @@ detect_arch() {
   esac
 }
 
+# ── 自愈 systemd 守护策略(存量机器补丁) ────────────────────
+# 旧版 service 模板是 Restart=on-failure,程序在线更新走 os.Exit(0) 正常退出
+# 时 systemd 不会拉起 → 502 Bad Gateway。每次 update 都检测并就地修复。
+ensure_service_healthy() {
+  local svc="/etc/systemd/system/${SERVICE_NAME}.service"
+  [ -f "$svc" ] || return 0
+  local changed=0
+
+  if grep -qE "^Restart=on-failure" "$svc"; then
+    sudo sed -i 's/^Restart=on-failure/Restart=always/' "$svc"
+    changed=1
+  fi
+  if ! grep -qE "^StartLimitIntervalSec=" "$svc"; then
+    sudo sed -i '/^\[Unit\]/a StartLimitIntervalSec=0' "$svc"
+    changed=1
+  fi
+
+  if [ $changed -eq 1 ]; then
+    sudo systemctl daemon-reload
+    ok "systemd 守护策略已自愈(Restart=always + 无重启次数限制)"
+  fi
+}
+
 # ── 获取最新版本号 ───────────────────────────────────────────
 get_latest_version() {
   local json=""
@@ -118,6 +141,9 @@ main() {
   info "下载前端: ${frontend_file}"
   curl -fSL --progress-bar "${base_url}/${frontend_file}" -o "/tmp/${frontend_file}" 2>/dev/null \
     || warn "前端包下载失败，跳过前端更新"
+
+  # 自愈 systemd 守护策略(旧版 on-failure → always,避免 os.Exit(0) 后不拉起)
+  ensure_service_healthy
 
   # 停止服务
   info "停止服务..."
