@@ -363,13 +363,15 @@ download_release() {
   rm -f "/tmp/${backend_file}"
   ok "后端 → ${INSTALL_DIR}/${BINARY_NAME}"
 
-  # 前端 tar.gz → 解压到安装目录根(创建 dist/)
+  # 前端 tar.gz → 解压到 dist/(CI 用 tar -C web/dist . 打包,内容直接是
+  # index.html + assets/,没 dist/ 外壳,必须指定 -C 目标到 dist/ 子目录)
   local frontend_file="${PROJECT}-frontend.tar.gz"
   info "下载前端: ${frontend_file}"
   if curl -fSL --progress-bar "${base_url}/${frontend_file}" -o "/tmp/${frontend_file}" 2>/dev/null; then
     sudo rm -rf "${INSTALL_DIR}/dist"
-    sudo tar --no-xattrs -xzf "/tmp/${frontend_file}" -C "${INSTALL_DIR}/" 2>/dev/null \
-      || sudo tar -xzf "/tmp/${frontend_file}" -C "${INSTALL_DIR}/"
+    sudo mkdir -p "${INSTALL_DIR}/dist"
+    sudo tar --no-xattrs -xzf "/tmp/${frontend_file}" -C "${INSTALL_DIR}/dist/" 2>/dev/null \
+      || sudo tar -xzf "/tmp/${frontend_file}" -C "${INSTALL_DIR}/dist/"
     rm -f "/tmp/${frontend_file}"
     ok "前端 → ${INSTALL_DIR}/dist"
   else

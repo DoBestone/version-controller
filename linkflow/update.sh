@@ -173,11 +173,13 @@ main() {
   rm -f "/tmp/${backend_file}"
   ok "后端已更新"
 
-  # 替换前端 → 安装目录根(创建 dist/)
+  # 替换前端 → 解压到 dist/(CI 打包是 tar -C web/dist . ,tar 里直接是
+  # index.html + assets/, 没有 dist/ 目录外壳, 必须把 -C 目标指到 dist/)
   if [ -f "/tmp/${frontend_file}" ]; then
     rm -rf "${INSTALL_DIR}/dist"
-    tar --no-xattrs -xzf "/tmp/${frontend_file}" -C "${INSTALL_DIR}/" 2>/dev/null \
-      || tar -xzf "/tmp/${frontend_file}" -C "${INSTALL_DIR}/"
+    mkdir -p "${INSTALL_DIR}/dist"
+    tar --no-xattrs -xzf "/tmp/${frontend_file}" -C "${INSTALL_DIR}/dist/" 2>/dev/null \
+      || tar -xzf "/tmp/${frontend_file}" -C "${INSTALL_DIR}/dist/"
     rm -f "/tmp/${frontend_file}"
     ok "前端已更新"
   fi
