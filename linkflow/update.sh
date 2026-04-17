@@ -68,12 +68,19 @@ ensure_service_healthy() {
 }
 
 # ── 获取最新版本号 ───────────────────────────────────────────
+# GitHub API /releases 按 created_at 倒序返回,跟 semver 顺序不一致
+# (比如 v1.1.10 的 created_at 可能早于 v1.1.9 → API 把 v1.1.9 排前面),
+# 所以不能 head -1 当最新,必须自己按 sort -V (GNU semver 排序) 取最大。
 get_latest_version() {
   local json=""
-  json=$(curl -sL "https://api.github.com/repos/${REPO}/releases" 2>/dev/null || true)
+  json=$(curl -sL "https://api.github.com/repos/${REPO}/releases?per_page=50" 2>/dev/null || true)
   [ -z "$json" ] && return
-  echo "$json" | grep -oE "\"tag_name\"[[:space:]]*:[[:space:]]*\"${PROJECT}-v[0-9][^\"]*\"" \
-    | head -1 | grep -oE "${PROJECT}-v[0-9][^\"]*" | sed "s/${PROJECT}-v//" || true
+  echo "$json" \
+    | grep -oE "\"tag_name\"[[:space:]]*:[[:space:]]*\"${PROJECT}-v[0-9][^\"]*\"" \
+    | grep -oE "${PROJECT}-v[0-9][^\"]*" \
+    | sed "s/${PROJECT}-v//" \
+    | sort -V \
+    | tail -1
 }
 
 # ── 主流程 ───────────────────────────────────────────────────
