@@ -145,18 +145,18 @@ main() {
   # 自愈 systemd 守护策略(旧版 on-failure → always,避免 os.Exit(0) 后不拉起)
   ensure_service_healthy
 
-  # 停止服务
+  # 停止服务(强清所有同名残留,含 t 状态的僵尸)
   info "停止服务..."
   if command -v systemctl &>/dev/null && systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null; then
-    sudo systemctl stop "$SERVICE_NAME"
-    ok "服务已停止"
-  else
-    local pid; pid=$(pgrep -x "$BINARY_NAME" 2>/dev/null | head -1 || true)
-    if [ -n "$pid" ]; then
-      kill "$pid" 2>/dev/null || true
-      sleep 2; kill -9 "$pid" 2>/dev/null || true
-      ok "进程已停止"
-    fi
+    sudo systemctl stop "$SERVICE_NAME" 2>/dev/null || true
+    ok "systemd 服务已停止"
+  fi
+  # 不管 systemd 怎么说,兜底 SIGKILL 掉同名进程(t 状态响应不了 SIGTERM,直接 -9)
+  local stale; stale=$(pgrep -x "$BINARY_NAME" 2>/dev/null || true)
+  if [ -n "$stale" ]; then
+    echo "$stale" | xargs -r sudo kill -9 2>/dev/null || true
+    sleep 2
+    warn "强杀残留进程: $(echo $stale | tr '\n' ' ')"
   fi
 
   # 替换后端
